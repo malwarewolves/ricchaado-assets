@@ -1,4 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { BRAND } from "./lib/config.js";
+import { useAuth } from "./lib/auth.jsx";
+import { useCustomCards } from "./lib/useCustomCards.js";
+import { useProgress } from "./lib/useProgress.js";
+import AccountScreen from "./components/AccountScreen.jsx";
 
 // ============================================================
 // DATA
@@ -445,7 +450,7 @@ function shuffle(arr) {
 
 // ── Inline SVG reproducing the RA logo mark ──
 const RALogo = () => (
-  <img src="https://raw.githubusercontent.com/malwarewolves/ricchaado-assets/main/RA-Logo-transparent.png" alt="Ricchaado Academy" style={{height:"72px", display:"block"}} />
+  <img src={BRAND.logoUrl} alt={BRAND.name} style={{height:"72px", display:"block"}} />
 );
 
 // ── Chibi characters with coral accents ──
@@ -741,11 +746,12 @@ export default function RicchaadoAcademy() {
   const [stats, setStats] = useState({ correct: 0, wrong: 0, total: 0 });
   const inputRef = useRef(null);
 
-  // Custom flashcards
-  const [customCards, setCustomCards] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("ricchaado_custom_cards") || "[]"); }
-    catch { return []; }
-  });
+  // Auth + cloud-synced data (falls back to localStorage when signed out / unconfigured)
+  const { user } = useAuth();
+  const { cards: customCards, addCard, deleteCard } = useCustomCards();
+  const { stats: lifetime, recordResult } = useProgress();
+
+  // Custom flashcards (input fields)
   const [newJp, setNewJp] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
   const [newEn, setNewEn] = useState("");
@@ -754,21 +760,18 @@ export default function RicchaadoAcademy() {
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'apple-touch-icon';
-    link.href = 'https://raw.githubusercontent.com/malwarewolves/ricchaado-assets/main/RA-Logo-transparent-icon.png';
+    link.href = BRAND.iconUrl;
     document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("ricchaado_custom_cards", JSON.stringify(customCards));
-  }, [customCards]);
 
   const addCustomCard = () => {
     if (!newJp.trim() || !newEn.trim() || customCards.length >= 200) return;
-    setCustomCards(prev => [...prev, { id: Date.now(), japanese: newJp.trim(), romaji: newRomaji.trim(), english: newEn.trim() }]);
+    addCard({ japanese: newJp.trim(), romaji: newRomaji.trim(), english: newEn.trim() });
     setNewJp(""); setNewRomaji(""); setNewEn("");
   };
 
-  const deleteCustomCard = (id) => setCustomCards(prev => prev.filter(c => c.id !== id));
+  const deleteCustomCard = (id) => deleteCard(id);
 
   const toggleRow = (name) => {
     setAllRows(false);
@@ -846,6 +849,19 @@ export default function RicchaadoAcademy() {
     return { label: "練習! Keep practicing!", emoji: "📖" };
   };
 
+  // Record each finished quiz once (drives lifetime stats + streak).
+  const recordedRef = useRef(false);
+  useEffect(() => {
+    if (screen === "results") {
+      if (!recordedRef.current && stats.total > 0) {
+        recordedRef.current = true;
+        recordResult({ correct: stats.correct, answered: stats.total });
+      }
+    } else {
+      recordedRef.current = false;
+    }
+  }, [screen, stats.correct, stats.total, recordResult]);
+
   return (
     <>
       <style>{styles}</style>
@@ -858,17 +874,18 @@ export default function RicchaadoAcademy() {
           )}
           <RALogo />
           <div className="header-right">
-            <div className="header-course">Absolute Beginner Course</div>
-            <div className="header-tagline">日本語を学ぼう！</div>
+            <div className="header-course">{BRAND.courseLabel}</div>
+            <div className="header-tagline">{BRAND.tagline}</div>
           </div>
         </div>
 
         {/* NAV */}
-        {(screen === "home" || screen === "reference" || screen === "custom") && (
+        {(screen === "home" || screen === "reference" || screen === "custom" || screen === "account") && (
           <div className="nav-tabs">
             <button className={`nav-tab ${screen === "home" ? "active" : ""}`} onClick={() => setScreen("home")}>🎯 Practice</button>
-            <button className={`nav-tab ${screen === "custom" ? "active" : ""}`} onClick={() => setScreen("custom")}>📝 My Cards</button>
+            <button className={`nav-tab ${screen === "custom" ? "active" : ""}`} onClick={() => setScreen("custom")}>📝 Cards</button>
             <button className={`nav-tab ${screen === "reference" ? "active" : ""}`} onClick={() => setScreen("reference")}>📖 Reference</button>
+            <button className={`nav-tab ${screen === "account" ? "active" : ""}`} onClick={() => setScreen("account")}>{user ? "👤 Account" : "🔑 Sign In"}</button>
           </div>
         )}
 
@@ -1048,6 +1065,11 @@ export default function RicchaadoAcademy() {
                 <div className="stat-box"><div className="stat-num good">{stats.correct}</div><div className="stat-label">Correct</div></div>
                 <div className="stat-box"><div className="stat-num bad">{stats.wrong}</div><div className="stat-label">Wrong</div></div>
               </div>
+              {lifetime && lifetime.totalQuizzes > 0 && (
+                <div className="results-sub">
+                  🔥 {lifetime.currentStreak}-day streak · Best {lifetime.bestStreak} · {lifetime.totalQuizzes} quizzes done
+                </div>
+              )}
               <div className="results-btns">
                 <button className="results-btn secondary" onClick={()=>setScreen("home")}>← Settings</button>
                 <button className="results-btn primary" onClick={startQuiz}>Try Again 🚀</button>
@@ -1141,6 +1163,9 @@ export default function RicchaadoAcademy() {
             ))}
           </div>
         )}
+
+        {/* ACCOUNT */}
+        {screen === "account" && <AccountScreen lifetime={lifetime} />}
 
       </div>
     </>

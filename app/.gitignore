@@ -2,3 +2,10 @@ node_modules
 dist
 *.local
 .DS_Store
+
+# Environment secrets
+.env
+
+# Capacitor native projects (generated)
+ios
+android
