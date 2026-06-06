@@ -3,6 +3,7 @@ import { BRAND } from "./lib/config.js";
 import { useAuth } from "./lib/auth.jsx";
 import { useCustomCards } from "./lib/useCustomCards.js";
 import { useProgress } from "./lib/useProgress.js";
+import { useSpeech } from "./lib/useSpeech.js";
 import AccountScreen from "./components/AccountScreen.jsx";
 
 // ============================================================
@@ -757,6 +758,16 @@ export default function RicchaadoAcademy() {
   const [newEn, setNewEn] = useState("");
   const [wordCount, setWordCount] = useState(25);
 
+  // Text-to-speech (free, on-device Web Speech API)
+  const { speak, supported: ttsSupported } = useSpeech();
+  const [autoPlay, setAutoPlay] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("ricchaado_autoplay") ?? "true"); }
+    catch { return true; }
+  });
+  useEffect(() => {
+    localStorage.setItem("ricchaado_autoplay", JSON.stringify(autoPlay));
+  }, [autoPlay]);
+
   useEffect(() => {
     const link = document.createElement('link');
     link.rel = 'apple-touch-icon';
@@ -848,6 +859,23 @@ export default function RicchaadoAcademy() {
     if (pct >= 0.5) return { label: "頑張れ! Keep going!", emoji: "💪" };
     return { label: "練習! Keep practicing!", emoji: "📖" };
   };
+
+  // Auto-play pronunciation. When the prompt already shows Japanese
+  // (characters mode / JP→EN) speak it as the card appears; for EN→JP the
+  // Japanese is the answer, so speak it when feedback is revealed instead.
+  const promptShowsJapanese = (c) => !(direction === "en-jp" && c?.isWord);
+  useEffect(() => {
+    if (screen === "quiz" && autoPlay && current && !feedback && promptShowsJapanese(current)) {
+      speak(current.char);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
+  useEffect(() => {
+    if (feedback && autoPlay && direction === "en-jp" && current?.isWord) {
+      speak(current.char);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedback]);
 
   // Record each finished quiz once (drives lifetime stats + streak).
   const recordedRef = useRef(false);
@@ -989,6 +1017,20 @@ export default function RicchaadoAcademy() {
                 </div>
               )}
 
+              {ttsSupported && (
+                <div className="card">
+                  <div className="section-label">🔊 Audio</div>
+                  <button
+                    className={`direction-btn ${autoPlay ? "active" : ""}`}
+                    style={{ width: "100%" }}
+                    onClick={() => setAutoPlay(a => !a)}>
+                    <span className="direction-btn-label">
+                      Auto-play pronunciation · {autoPlay ? "On" : "Off"}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               <button className="start-btn" onClick={startQuiz} disabled={!canStart}>
                 始める · Start Quiz 🚀
               </button>
@@ -1022,6 +1064,13 @@ export default function RicchaadoAcademy() {
                 {direction === "en-jp" && current.isWord ? current.meaning : current.char}
               </div>
               <div className="char-type-badge">{current.type}{direction === "en-jp" ? " · EN→JP" : ""}</div>
+              {ttsSupported && promptShowsJapanese(current) && (
+                <button type="button" aria-label="Play pronunciation"
+                  onClick={() => speak(current.char)}
+                  style={{ marginTop: 10, background: "white", border: "1.5px solid var(--cream2)", borderRadius: 99, padding: "5px 16px", fontSize: 17, cursor: "pointer", position: "relative", zIndex: 2 }}>
+                  🔊
+                </button>
+              )}
             </div>
             {!feedback && (
               <div className="input-area">
@@ -1040,6 +1089,13 @@ export default function RicchaadoAcademy() {
                   {direction === "en-jp" ? feedback.japanese : feedback.answer}
                 </div>
                 <div className="feedback-english">{direction === "en-jp" ? feedback.answer : feedback.meaning && `"${feedback.meaning}"`}</div>
+                {ttsSupported && (
+                  <button type="button" aria-label="Play pronunciation"
+                    onClick={() => speak(feedback.japanese || current.char)}
+                    style={{ marginTop: 8, background: "white", border: "1.5px solid var(--cream2)", borderRadius: 99, padding: "4px 14px", fontSize: 15, cursor: "pointer" }}>
+                    🔊 Hear it
+                  </button>
+                )}
                 {!feedback.correct && <div className="feedback-wrong-ans">You typed: {input||"(nothing)"}</div>}
               </div>
             )}
