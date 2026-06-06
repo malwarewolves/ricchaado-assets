@@ -4,6 +4,7 @@ import { useAuth } from "./lib/auth.jsx";
 import { useCustomCards } from "./lib/useCustomCards.js";
 import { useProgress } from "./lib/useProgress.js";
 import { useSpeech } from "./lib/useSpeech.js";
+import { useSpeechRecognition } from "./lib/useSpeechRecognition.js";
 import AccountScreen from "./components/AccountScreen.jsx";
 
 // ============================================================
@@ -760,6 +761,8 @@ export default function RicchaadoAcademy() {
 
   // Text-to-speech (free, on-device Web Speech API)
   const { speak, supported: ttsSupported } = useSpeech();
+  // Speak-to-check (free, native iOS/Android recognizer — hidden on web)
+  const { supported: recSupported, listening, listen } = useSpeechRecognition();
   const [autoPlay, setAutoPlay] = useState(() => {
     try { return JSON.parse(localStorage.getItem("ricchaado_autoplay") ?? "true"); }
     catch { return true; }
@@ -1079,6 +1082,14 @@ export default function RicchaadoAcademy() {
                   value={input} onChange={e=>setInput(e.target.value)}
                   onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
                   autoFocus autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false}/>
+                {recSupported && current?.isWord && (direction === "en-jp" || mode === "custom") && (
+                  <button className="submit-btn" type="button"
+                    aria-label="Speak your answer"
+                    style={{ background: listening ? "var(--wrong)" : "var(--charcoal)" }}
+                    onClick={async () => { const heard = await listen(); if (heard) setInput(heard); }}>
+                    {listening ? "…" : "🎤"}
+                  </button>
+                )}
                 <button className="submit-btn" onClick={handleSubmit}>→</button>
               </div>
             )}

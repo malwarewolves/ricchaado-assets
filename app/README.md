@@ -15,6 +15,8 @@ so a rebrand is a single-file change. The logos load from this repo's GitHub raw
 - **My Cards** — add your own Japanese / romaji / English cards; quiz them.
 - **Accounts + sync** *(optional)* — sign in to sync custom cards and lifetime progress across devices.
 - **Streaks & stats** — daily streak, best streak, total quizzes, accuracy.
+- **Voice** — 🔊 text-to-speech playback (on-device, free) on every card, with an auto-play toggle.
+- **Speak-to-check** *(native iOS/Android only)* — 🎤 say the word in Words / My Cards mode; hidden on web.
 
 ## Run locally
 
@@ -50,6 +52,8 @@ The anon key is safe in a client build; **Row Level Security** isolates each use
 
 The web app wraps into a native iOS app with [Capacitor](https://capacitorjs.com) — no rewrite.
 Requires a **Mac with Xcode** and an **Apple Developer account** ($99/yr).
+Full steps (incl. the mic/speech permission strings needed for speak-to-check) are in
+[`ios-setup.md`](ios-setup.md).
 
 ```bash
 npm run cap:add:ios     # one-time: create the native iOS project
