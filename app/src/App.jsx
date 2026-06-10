@@ -450,9 +450,19 @@ function shuffle(arr) {
   return a;
 }
 
-// ── Inline SVG reproducing the RA logo mark ──
+// ── Keiro wordmark (text, gradient) ──
 const RALogo = () => (
-  <img src={BRAND.logoUrl} alt={BRAND.name} style={{height:"72px", display:"block"}} />
+  <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.02 }}>
+    <span style={{
+      fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: "28px", letterSpacing: "-0.03em",
+      background: "linear-gradient(120deg, var(--coral), var(--accent))",
+      WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+    }}>{BRAND.name}</span>
+    <span style={{
+      fontFamily: "'Noto Sans JP', sans-serif", fontSize: "11px", fontWeight: 700,
+      color: "var(--muted)", letterSpacing: "0.36em", marginTop: "2px",
+    }}>{BRAND.kana}</span>
+  </div>
 );
 
 // ── Chibi characters with coral accents ──
@@ -510,18 +520,20 @@ const styles = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --cream:    #f2edcc;
-    --cream2:   #e8e0a8;
-    --paper:    #faf8ee;
-    --charcoal: #1e1c18;
-    --dark:     #2e2b22;
-    --coral:    #e8705a;
-    --coral-d:  #c45a44;
-    --coral-l:  #f4b0a0;
-    --muted:    #7a6f56;
-    --border:   rgba(30,28,24,0.14);
-    --correct:  #3dab6e;
-    --wrong:    #d94040;
+    --cream:    #ffffff;
+    --cream2:   #ece8ff;
+    --paper:    #f4f1fd;
+    --charcoal: #1a1430;
+    --dark:     #2a2150;
+    --coral:    #ff4d6d;
+    --coral-d:  #e02f55;
+    --coral-l:  #ffd3dd;
+    --accent:   #6c4cf0;
+    --accent-d: #5a3ad6;
+    --muted:    #6e6890;
+    --border:   rgba(26,20,48,0.12);
+    --correct:  #12b886;
+    --wrong:    #ff4242;
   }
 
   body { font-family: 'Nunito', sans-serif; background: var(--paper); color: var(--charcoal); min-height: 100vh; }
@@ -556,7 +568,7 @@ const styles = `
   /* HOME */
   .home-screen { flex: 1; overflow-y: auto; }
   .hero {
-    background: var(--cream); padding: 18px 20px 0;
+    background: linear-gradient(135deg, #fff0f5 0%, #efe9ff 100%); padding: 18px 20px 0;
     display: flex; align-items: flex-end; gap: 10px;
     position: relative; overflow: hidden; min-height: 148px;
     border-bottom: 2.5px solid var(--cream2);
@@ -565,7 +577,7 @@ const styles = `
   .hero-welcome { font-size: 10px; font-weight: 900; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
   .hero-title { font-size: 28px; font-weight: 900; color: var(--charcoal); line-height: 1.05; margin-top: 3px; }
   .hero-title em { color: var(--coral); font-style: normal; }
-  .hero-bg { position: absolute; bottom: -8px; right: 70px; font-family: 'Noto Sans JP',sans-serif; font-size: 108px; color: rgba(30,28,24,0.05); line-height: 1; pointer-events: none; }
+  .hero-bg { position: absolute; bottom: -8px; right: 70px; font-family: 'Noto Sans JP',sans-serif; font-size: 108px; color: rgba(108,76,240,0.10); line-height: 1; pointer-events: none; }
 
   /* Discord */
   .discord-banner {
@@ -586,7 +598,7 @@ const styles = `
   .mode-selector { display: flex; gap: 9px; }
   .mode-btn { flex: 1; padding: 13px 8px; border: 2px solid var(--cream2); border-radius: 13px; background: white; cursor: pointer; text-align: center; transition: all 0.18s; }
   .mode-btn:hover { border-color: var(--coral-l); }
-  .mode-btn.active { border-color: var(--coral); background: #fdf5f3; }
+  .mode-btn.active { border-color: var(--coral); background: #f3eeff; }
   .mode-btn-icon { font-size: 26px; display: block; font-family: 'Noto Sans JP', sans-serif; }
   .mode-btn-label { font-size: 13px; font-weight: 900; color: var(--charcoal); margin-top: 4px; display: block; }
   .mode-btn-sub { font-size: 10px; color: var(--muted); font-weight: 700; }
@@ -595,7 +607,7 @@ const styles = `
   .script-selector { display: flex; gap: 8px; }
   .script-btn { flex: 1; padding: 11px 6px; border: 2px solid var(--cream2); border-radius: 11px; background: white; cursor: pointer; text-align: center; transition: all 0.18s; }
   .script-btn:hover { border-color: var(--coral-l); }
-  .script-btn.active { border-color: var(--coral); background: #fdf5f3; }
+  .script-btn.active { border-color: var(--coral); background: #f3eeff; }
   .script-char { font-family: 'Noto Sans JP', sans-serif; font-size: 25px; display: block; line-height: 1.2; }
   .script-label { font-size: 10px; font-weight: 900; color: var(--muted); margin-top: 2px; letter-spacing: 0.05em; display: block; }
   .script-btn.active .script-label { color: var(--coral-d); }
@@ -603,21 +615,21 @@ const styles = `
   .row-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .row-btn { padding: 8px 4px; border: 2px solid var(--cream2); border-radius: 9px; background: white; cursor: pointer; text-align: center; font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 800; color: var(--muted); transition: all 0.15s; }
   .row-btn:hover:not(:disabled) { border-color: var(--coral-l); color: var(--charcoal); }
-  .row-btn.active { border-color: var(--coral); background: #fdf5f3; color: var(--coral-d); }
+  .row-btn.active { border-color: var(--coral); background: #f3eeff; color: var(--coral-d); }
   .row-btn:disabled { opacity: 0.4; cursor: default; }
   .row-chars { font-family: 'Noto Sans JP', sans-serif; font-size: 13px; display: block; margin-top: 1px; color: var(--charcoal); }
   .all-row-btn { grid-column: 1 / -1; padding: 9px; border: 2px dashed var(--cream2); border-radius: 9px; background: none; cursor: pointer; font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 800; color: var(--muted); transition: all 0.15s; }
   .all-row-btn:hover { border-color: var(--coral); color: var(--coral-d); }
-  .all-row-btn.active { border-color: var(--coral); background: #fdf5f3; color: var(--coral-d); }
+  .all-row-btn.active { border-color: var(--coral); background: #f3eeff; color: var(--coral-d); }
 
   .start-btn {
-    width: 100%; padding: 16px; background: var(--coral); color: white; border: none;
-    border-radius: 13px; font-family: 'Nunito', sans-serif; font-size: 17px; font-weight: 900;
-    cursor: pointer; letter-spacing: 0.03em; box-shadow: 0 4px 16px rgba(232,112,90,0.36);
-    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    width: 100%; padding: 16px; background: linear-gradient(135deg, var(--coral), var(--accent)); color: white; border: none;
+    border-radius: 14px; font-family: 'Nunito', sans-serif; font-size: 17px; font-weight: 900;
+    cursor: pointer; letter-spacing: 0.03em; box-shadow: 0 8px 22px rgba(255,77,109,0.40);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
     display: flex; align-items: center; justify-content: center; gap: 10px;
   }
-  .start-btn:hover:not(:disabled) { background: var(--coral-d); transform: translateY(-2px); box-shadow: 0 6px 22px rgba(232,112,90,0.46); }
+  .start-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(108,76,240,0.45); filter: brightness(1.06); }
   .start-btn:disabled { background: var(--cream2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
 
   .home-footer { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; }
@@ -628,7 +640,7 @@ const styles = `
   .quiz-screen { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; overflow-y: auto; }
   .progress-wrap { background: var(--cream); border-radius: 13px; padding: 11px 13px; border: 2px solid var(--cream2); }
   .progress-track { background: var(--cream2); border-radius: 99px; height: 9px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--coral) 0%, #f0a860 100%); border-radius: 99px; transition: width 0.4s ease; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--coral) 0%, var(--accent) 100%); border-radius: 99px; transition: width 0.4s ease; }
   .progress-meta { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--muted); margin-top: 5px; }
 
   .stats-row { display: flex; gap: 9px; }
@@ -640,9 +652,9 @@ const styles = `
   .stat-label { font-size: 10px; font-weight: 800; color: var(--muted); margin-top: 2px; letter-spacing: 0.05em; text-transform: uppercase; }
 
   .char-card {
-    background: var(--cream); border-radius: 18px; padding: 26px 16px 18px;
+    background: linear-gradient(160deg, #ffffff 0%, #f5f1ff 100%); border-radius: 20px; padding: 26px 16px 18px;
     text-align: center; border: 2px solid var(--cream2);
-    box-shadow: 0 3px 14px rgba(30,28,24,0.07); position: relative; overflow: hidden;
+    box-shadow: 0 10px 26px rgba(108,76,240,0.13); position: relative; overflow: hidden;
   }
   .char-card::before { content: ''; position: absolute; top: -22px; right: -22px; width: 78px; height: 78px; border-radius: 50%; background: var(--cream2); opacity: 0.55; }
   .char-display { font-family: 'Noto Sans JP', sans-serif; font-size: 94px; line-height: 1; color: var(--charcoal); position: relative; z-index: 2; }
@@ -687,7 +699,7 @@ const styles = `
   .direction-selector { display: flex; gap: 8px; }
   .direction-btn { flex: 1; padding: 10px 6px; border: 2px solid var(--cream2); border-radius: 11px; background: white; cursor: pointer; text-align: center; transition: all 0.18s; }
   .direction-btn:hover { border-color: var(--coral-l); }
-  .direction-btn.active { border-color: var(--coral); background: #fdf5f3; }
+  .direction-btn.active { border-color: var(--coral); background: #f3eeff; }
   .direction-btn-icon { font-size: 18px; display: block; }
   .direction-btn-label { font-size: 11px; font-weight: 900; color: var(--muted); margin-top: 3px; display: block; }
   .direction-btn.active .direction-btn-label { color: var(--coral-d); }
@@ -722,7 +734,7 @@ const styles = `
   .ref-screen { flex: 1; overflow-y: auto; padding: 13px 14px 26px; }
   .ref-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
   .ref-toggle-btn { flex: 1; padding: 9px; border: 2px solid var(--cream2); border-radius: 11px; background: var(--cream); font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800; color: var(--muted); cursor: pointer; transition: all 0.15s; }
-  .ref-toggle-btn.active { border-color: var(--coral); background: #fdf5f3; color: var(--coral-d); }
+  .ref-toggle-btn.active { border-color: var(--coral); background: #f3eeff; color: var(--coral-d); }
   .ref-row-label { font-size: 11px; font-weight: 900; color: var(--muted); letter-spacing: 0.09em; text-transform: uppercase; padding: 7px 2px 4px; border-top: 1.5px solid var(--cream2); margin-top: 3px; }
   .ref-chars-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
   .ref-cell { background: var(--cream); border: 1.5px solid var(--cream2); border-radius: 9px; padding: 7px 9px; text-align: center; min-width: 50px; }
@@ -947,15 +959,6 @@ export default function RicchaadoAcademy() {
               <ChibiSensei />
               <div className="hero-bg">語</div>
             </div>
-
-            <a className="discord-banner" href="https://discord.gg/TPnYVjhw" target="_blank" rel="noreferrer">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.08.11 18.1.127 18.115a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-              <div className="discord-text">
-                <strong>Join the Discord Community</strong>
-                <span>Learn together · Ask questions · Have fun</span>
-              </div>
-              <div className="discord-arrow">→</div>
-            </a>
 
             <div className="settings-content">
               <div>
