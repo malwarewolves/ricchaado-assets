@@ -526,12 +526,12 @@ const styles = `
 
   body { font-family: 'Nunito', sans-serif; background: var(--paper); color: var(--charcoal); min-height: 100vh; }
 
-  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); padding-bottom: env(safe-area-inset-bottom); }
 
   /* HEADER */
   .header {
     background: var(--cream); border-bottom: 2.5px solid var(--cream2);
-    padding: 10px 16px; display: flex; align-items: center; gap: 12px; z-index: 10;
+    padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; display: flex; align-items: center; gap: 12px; z-index: 10;
   }
   .header-right { flex: 1; min-width: 0; }
   .header-course { font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
