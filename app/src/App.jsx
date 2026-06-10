@@ -465,52 +465,6 @@ const RALogo = () => (
   </div>
 );
 
-// ── Chibi characters with coral accents ──
-const ChibiSensei = () => (
-  <svg viewBox="0 0 120 155" width="88" height="120" style={{display:"block"}}>
-    <rect x="35" y="95" width="50" height="52" rx="8" fill="#2a2a2a"/>
-    <rect x="42" y="100" width="36" height="38" rx="4" fill="white"/>
-    <polygon points="60,102 56,108 60,128 64,108" fill="#e8705a"/>
-    <ellipse cx="60" cy="72" rx="28" ry="30" fill="#8B5E3C"/>
-    <ellipse cx="60" cy="48" rx="30" ry="18" fill="#1a1a1a"/>
-    <ellipse cx="38" cy="58" rx="10" ry="14" fill="#1a1a1a"/>
-    <ellipse cx="82" cy="58" rx="10" ry="14" fill="#1a1a1a"/>
-    <circle cx="50" cy="72" r="7" fill="white"/>
-    <circle cx="70" cy="72" r="7" fill="white"/>
-    <circle cx="50" cy="73" r="5" fill="#1a1a1a"/>
-    <circle cx="70" cy="73" r="5" fill="#1a1a1a"/>
-    <circle cx="51" cy="71" r="2" fill="white"/>
-    <circle cx="71" cy="71" r="2" fill="white"/>
-    <ellipse cx="44" cy="80" rx="5" ry="3" fill="#e8705a" opacity="0.45"/>
-    <ellipse cx="76" cy="80" rx="5" ry="3" fill="#e8705a" opacity="0.45"/>
-    <path d="M50 84 Q60 92 70 84" stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-    <ellipse cx="60" cy="90" rx="16" ry="8" fill="#1a1a1a" opacity="0.65"/>
-    <ellipse cx="95" cy="115" rx="12" ry="10" fill="#8B5E3C"/>
-    <rect x="20" y="118" width="16" height="14" rx="3" fill="white"/>
-    <rect x="22" y="120" width="12" height="10" rx="2" fill="#e3f2fd"/>
-  </svg>
-);
-
-const ChibiGirl = () => (
-  <svg viewBox="0 0 110 145" width="72" height="105" style={{display:"block"}}>
-    <rect x="28" y="86" width="50" height="50" rx="8" fill="#e8705a"/>
-    <ellipse cx="53" cy="63" rx="28" ry="30" fill="#6B3A2A"/>
-    <ellipse cx="53" cy="40" rx="32" ry="20" fill="#1a1a1a"/>
-    <rect x="18" y="40" width="14" height="36" rx="7" fill="#1a1a1a"/>
-    <rect x="74" y="40" width="14" height="36" rx="7" fill="#1a1a1a"/>
-    <rect x="32" y="36" width="12" height="7" rx="3" fill="#e8705a"/>
-    <rect x="38" y="34" width="12" height="7" rx="3" fill="#c45a44"/>
-    <circle cx="43" cy="63" r="8" fill="#1a1a1a"/>
-    <circle cx="63" cy="63" r="8" fill="#1a1a1a"/>
-    <circle cx="44" cy="61" r="3" fill="white"/>
-    <circle cx="64" cy="61" r="3" fill="white"/>
-    <ellipse cx="36" cy="72" rx="6" ry="4" fill="#e8705a" opacity="0.5"/>
-    <ellipse cx="70" cy="72" rx="6" ry="4" fill="#e8705a" opacity="0.5"/>
-    <path d="M43 76 Q53 84 63 76" stroke="#1a1a1a" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-    <ellipse cx="76" cy="76" rx="9" ry="8" fill="#6B3A2A"/>
-  </svg>
-);
-
 // ============================================================
 // STYLES
 // ============================================================
@@ -956,7 +910,6 @@ export default function RicchaadoAcademy() {
                 <div className="hero-welcome">Welcome to</div>
                 <div className="hero-title">ABSOLUTE<br/><em>BEGINNER</em><br/>JAPANESE</div>
               </div>
-              <ChibiSensei />
               <div className="hero-bg">語</div>
             </div>
 
@@ -1058,7 +1011,6 @@ export default function RicchaadoAcademy() {
               </button>
 
               <div className="home-footer">
-                <ChibiGirl />
               <div className="home-footer-text">
                 {direction === "en-jp" && mode === "words"
                   ? <>See <em>English</em>, type the<br/><em>romaji or Japanese!</em></>
@@ -1160,7 +1112,6 @@ export default function RicchaadoAcademy() {
           const pct = stats.total>0?Math.round((stats.correct/stats.total)*100):0;
           return (
             <div className="results-screen">
-              <div className="results-chibi">{pct>=70?<ChibiSensei/>:<ChibiGirl/>}</div>
               <div className="results-grade">{g.emoji} {g.label}</div>
               <div className="results-score">{pct}%</div>
               <div className="results-sub">{stats.correct} / {stats.total} correct</div>
