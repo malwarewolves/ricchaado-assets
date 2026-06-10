@@ -758,11 +758,12 @@ export default function RicchaadoAcademy() {
   const [newRomaji, setNewRomaji] = useState("");
   const [newEn, setNewEn] = useState("");
   const [wordCount, setWordCount] = useState(25);
+  const [voiceHint, setVoiceHint] = useState(null); // null | "nomatch"
 
   // Text-to-speech (free, on-device Web Speech API)
   const { speak, supported: ttsSupported } = useSpeech();
   // Speak-to-check (free, native iOS/Android recognizer — hidden on web)
-  const { supported: recSupported, listening, listen } = useSpeechRecognition();
+  const { supported: recSupported, listening, listen, error: recError } = useSpeechRecognition();
   const [autoPlay, setAutoPlay] = useState(() => {
     try { return JSON.parse(localStorage.getItem("ricchaado_autoplay") ?? "true"); }
     catch { return true; }
@@ -1102,14 +1103,27 @@ export default function RicchaadoAcademy() {
                     aria-label={direction === "jp-en" && !current.isCustom ? "Say the English meaning" : "Say the Japanese word"}
                     style={{ background: listening ? "var(--wrong)" : "var(--charcoal)" }}
                     onClick={async () => {
+                      setVoiceHint(null);
                       const lang = (direction === "jp-en" && !current.isCustom) ? "en-US" : "ja-JP";
                       const heard = await listen(lang);
                       if (heard) { setInput(heard); checkAnswer(heard); }
+                      else setVoiceHint("nomatch");
                     }}>
                     {listening ? "…" : "🎤"}
                   </button>
                 )}
                 <button className="submit-btn" onClick={handleSubmit}>→</button>
+              </div>
+            )}
+            {!feedback && recSupported && current?.isWord && (listening || voiceHint || recError) && (
+              <div style={{textAlign:"center", fontSize:12, fontWeight:800, marginTop:-4,
+                color: listening ? "var(--coral)" : "var(--muted)"}}>
+                {listening
+                  ? (direction === "jp-en" && !current.isCustom ? "🎤 Listening… say the English meaning" : "🎤 Listening… say it in Japanese")
+                  : recError === "denied" ? "Mic access denied — enable it in Settings ▸ your app"
+                  : recError === "unavailable" ? "Speech recognition unavailable on this device"
+                  : voiceHint === "nomatch" ? "Didn't catch that — tap 🎤 and try again"
+                  : ""}
               </div>
             )}
             {feedback && (
