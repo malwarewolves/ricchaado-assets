@@ -1211,12 +1211,19 @@ export default function RicchaadoAcademy() {
               <button className={`ref-toggle-btn ${refScript==="hiragana"?"active":""}`} onClick={()=>setRefScript("hiragana")}>あ Hiragana</button>
               <button className={`ref-toggle-btn ${refScript==="katakana"?"active":""}`} onClick={()=>setRefScript("katakana")}>ア Katakana</button>
             </div>
+            {ttsSupported && (
+              <div style={{textAlign:"center", fontSize:12, fontWeight:700, color:"var(--muted)", margin:"2px 0 6px"}}>
+                🔊 Tap any character to hear it
+              </div>
+            )}
             {(refScript==="hiragana"?HIRAGANA_ROWS:KATAKANA_ROWS).map(row=>(
               <div key={row.name}>
                 <div className="ref-row-label">{row.name}</div>
                 <div className="ref-chars-row">
                   {row.chars.map(c=>(
-                    <div className="ref-cell" key={c.char}>
+                    <div className="ref-cell" key={c.char}
+                      onClick={() => ttsSupported && speak(c.char)}
+                      style={ttsSupported ? { cursor: "pointer" } : undefined}>
                       <span className="ref-char">{c.char}</span>
                       <div className="ref-romaji">{c.romaji}</div>
                     </div>
