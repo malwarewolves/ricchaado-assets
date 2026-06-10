@@ -830,16 +830,12 @@ export default function RicchaadoAcademy() {
       : false;
     const jpMatch = userInRaw === current.char;
     const enMatch = current.meaning ? userIn === current.meaning.toLowerCase().trim() : false;
-    let correct;
-    if (current.isCustom) {
-      // Custom cards: romaji is optional, so accept romaji, the Japanese, or the English meaning
-      correct = romajiMatch || jpMatch || enMatch;
-    } else if (direction === "jp-en") {
-      correct = romajiMatch;
-    } else {
-      // en-jp: accept romaji OR actual japanese characters
-      correct = romajiMatch || jpMatch;
-    }
+    // Romaji is always valid; saying/typing the actual Japanese is always valid
+    // (this is what makes 🎤 speak-to-check work in both directions).
+    // Custom cards additionally accept the English meaning.
+    const correct = current.isCustom
+      ? (romajiMatch || jpMatch || enMatch)
+      : (romajiMatch || jpMatch);
     setStats(s => ({ correct: s.correct + (correct ? 1 : 0), wrong: s.wrong + (!correct ? 1 : 0), total: s.total + 1 }));
     setFeedback({ correct, answer: current.romaji || current.char, japanese: current.char, meaning: current.meaning });
   };
@@ -1082,7 +1078,7 @@ export default function RicchaadoAcademy() {
                   value={input} onChange={e=>setInput(e.target.value)}
                   onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
                   autoFocus autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false}/>
-                {recSupported && current?.isWord && (direction === "en-jp" || mode === "custom") && (
+                {recSupported && current?.isWord && (
                   <button className="submit-btn" type="button"
                     aria-label="Speak your answer"
                     style={{ background: listening ? "var(--wrong)" : "var(--charcoal)" }}
