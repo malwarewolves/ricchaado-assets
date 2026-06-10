@@ -40,6 +40,10 @@ export function useSpeechRecognition(language = "ja-JP") {
         return null;
       }
 
+      // Tear down any lingering session first — without this, iOS recognizes
+      // once and then silently refuses to start again (mic indicator stays on).
+      try { await SpeechRecognition.stop(); } catch { /* nothing active */ }
+
       setListening(true);
       const res = await SpeechRecognition.start({
         language: langOverride || language,
@@ -47,14 +51,17 @@ export function useSpeechRecognition(language = "ja-JP") {
         partialResults: false,
         popup: false,
       });
-      setListening(false);
 
       const match = res?.matches?.[0];
       return match ? normalize(match) : null;
     } catch (e) {
-      setListening(false);
       setError(e?.message || "error");
       return null;
+    } finally {
+      setListening(false);
+      // Release the mic/audio session so the next tap works and the
+      // recording indicator turns off.
+      try { await SpeechRecognition.stop(); } catch { /* ignore */ }
     }
   }, [supported, language]);
 
