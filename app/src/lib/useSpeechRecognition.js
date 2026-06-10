@@ -13,15 +13,16 @@ import { SpeechRecognition } from "@capacitor-community/speech-recognition";
  * iOS setup (see ios-setup.md): add NSMicrophoneUsageDescription and
  * NSSpeechRecognitionUsageDescription to Info.plist, or the app is rejected.
  */
+// Strip Japanese punctuation but keep spaces (English answers need them).
 const normalize = (s) =>
-  (s || "").trim().replace(/[。、，,.！!？?・\s]/g, "");
+  (s || "").trim().replace(/[。、，！？・]/g, "").replace(/\s+/g, " ");
 
 export function useSpeechRecognition(language = "ja-JP") {
   const supported = Capacitor.isNativePlatform();
   const [listening, setListening] = useState(false);
   const [error, setError] = useState(null);
 
-  const listen = useCallback(async () => {
+  const listen = useCallback(async (langOverride) => {
     if (!supported) return null;
     setError(null);
     try {
@@ -41,7 +42,7 @@ export function useSpeechRecognition(language = "ja-JP") {
 
       setListening(true);
       const res = await SpeechRecognition.start({
-        language,
+        language: langOverride || language,
         maxResults: 1,
         partialResults: false,
         popup: false,

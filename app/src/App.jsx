@@ -821,23 +821,42 @@ export default function RicchaadoAcademy() {
     setStats({ correct: 0, wrong: 0, total: 0 }); setScreen("quiz");
   };
 
-  const handleSubmit = () => {
-    if (!current || feedback) return;
-    const userInRaw = input.trim();
+  // Fuzzy English match so spoken/typed meanings count: "To fly / jump" ≈ "jump".
+  const matchesEnglish = (raw, meaning) => {
+    if (!meaning) return false;
+    const norm = (s) => s.toLowerCase()
+      .replace(/[^a-z0-9 ]/g, " ")
+      .replace(/\b(to|a|an|the)\b/g, " ")
+      .replace(/\s+/g, " ").trim();
+    const said = norm(raw);
+    if (!said) return false;
+    const options = new Set([norm(meaning)]);
+    meaning.split(/[/,;()]/).forEach((p) => { const n = norm(p); if (n) options.add(n); });
+    return options.has(said);
+  };
+
+  // Evaluate a typed or spoken answer. Romaji and the actual Japanese always
+  // count; in JP→English (and custom cards) the English meaning counts too —
+  // that's what lets you SAY the English when you see the Japanese.
+  const checkAnswer = (raw) => {
+    const userInRaw = (raw || "").trim();
     const userIn = userInRaw.toLowerCase();
     const romajiMatch = current.romaji
       ? current.romaji.toLowerCase().split("/").map(r => r.trim()).filter(Boolean).includes(userIn)
       : false;
     const jpMatch = userInRaw === current.char;
-    const enMatch = current.meaning ? userIn === current.meaning.toLowerCase().trim() : false;
-    // Romaji is always valid; saying/typing the actual Japanese is always valid
-    // (this is what makes 🎤 speak-to-check work in both directions).
-    // Custom cards additionally accept the English meaning.
-    const correct = current.isCustom
-      ? (romajiMatch || jpMatch || enMatch)
-      : (romajiMatch || jpMatch);
+    const enMatch = matchesEnglish(userIn, current.meaning);
+    let correct;
+    if (current.isCustom) correct = romajiMatch || jpMatch || enMatch;
+    else if (direction === "jp-en") correct = romajiMatch || jpMatch || enMatch;
+    else correct = romajiMatch || jpMatch;
     setStats(s => ({ correct: s.correct + (correct ? 1 : 0), wrong: s.wrong + (!correct ? 1 : 0), total: s.total + 1 }));
     setFeedback({ correct, answer: current.romaji || current.char, japanese: current.char, meaning: current.meaning });
+  };
+
+  const handleSubmit = () => {
+    if (!current || feedback) return;
+    checkAnswer(input);
   };
 
   const handleNext = () => {
@@ -1080,9 +1099,13 @@ export default function RicchaadoAcademy() {
                   autoFocus autoCapitalize="none" autoCorrect="off" autoComplete="off" spellCheck={false}/>
                 {recSupported && current?.isWord && (
                   <button className="submit-btn" type="button"
-                    aria-label="Speak your answer"
+                    aria-label={direction === "jp-en" && !current.isCustom ? "Say the English meaning" : "Say the Japanese word"}
                     style={{ background: listening ? "var(--wrong)" : "var(--charcoal)" }}
-                    onClick={async () => { const heard = await listen(); if (heard) setInput(heard); }}>
+                    onClick={async () => {
+                      const lang = (direction === "jp-en" && !current.isCustom) ? "en-US" : "ja-JP";
+                      const heard = await listen(lang);
+                      if (heard) { setInput(heard); checkAnswer(heard); }
+                    }}>
                     {listening ? "…" : "🎤"}
                   </button>
                 )}
