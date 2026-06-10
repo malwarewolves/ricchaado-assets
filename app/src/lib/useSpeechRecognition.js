@@ -7,28 +7,39 @@ import { SpeechRecognition } from "@capacitor-community/speech-recognition";
  * Android) via Capacitor. On-device, no backend, no hosting cost. Reports
  * supported:false on web so the mic UI only appears in the packaged app.
  *
- * Notes learned the hard way:
- *  - Never call SpeechRecognition.stop() when nothing is recording — the iOS
- *    plugin force-unwraps a nil and the app hard-crashes. We only stop() while
- *    a session is actually active (tracked via activeRef).
- *  - Cancel any text-to-speech first, otherwise the audio session stays owned
- *    by playback and the recognizer won't start the 2nd time ("works once").
+ * iOS specifics this code works around:
+ *  - With partialResults:false iOS NEVER auto-stops on silence, so start()
+ *    hangs forever ("Listening…" never resolves). We stream partial results
+ *    and stop ourselves: after a pause once something was heard, on a hard
+ *    timeout, or when the user taps the mic again.
+ *  - Calling stop() when nothing is recording hard-crashes the plugin
+ *    (nil unwrap in Plugin.swift) — only stop while a session is active.
+ *  - Cancel any TTS first or the audio session may refuse the mic.
  */
 const normalize = (s) =>
   (s || "").trim().replace(/[。、，！？・]/g, "").replace(/\s+/g, " ");
+
+const SILENCE_MS = 1800; // stop this long after the last new words
+const FIRST_WORD_MS = 7000; // give up if nothing heard at all
+const MAX_MS = 12000; // absolute cap
 
 export function useSpeechRecognition(language = "ja-JP") {
   const supported = Capacitor.isNativePlatform();
   const [listening, setListening] = useState(false);
   const [error, setError] = useState(null);
   const activeRef = useRef(false);
+  const finishRef = useRef(null);
 
   const listen = useCallback(
     async (langOverride) => {
-      if (!supported || activeRef.current) return null;
+      if (!supported) return null;
+      // Tap while listening = finish now with whatever was heard.
+      if (activeRef.current) {
+        finishRef.current?.();
+        return null;
+      }
       setError(null);
 
-      // Free the audio session from any TTS playback before recording.
       try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
 
       try {
@@ -43,33 +54,79 @@ export function useSpeechRecognition(language = "ja-JP") {
 
         activeRef.current = true;
         setListening(true);
-        const res = await SpeechRecognition.start({
-          language: langOverride || language,
-          maxResults: 1,
-          partialResults: false,
-          popup: false,
-        });
 
-        const match = res?.matches?.[0];
-        return match ? normalize(match) : null;
+        return await new Promise(async (resolve) => {
+          let transcript = "";
+          let silenceTimer = null;
+          let maxTimer = null;
+          let listener = null;
+          let done = false;
+
+          const finish = async () => {
+            if (done) return;
+            done = true;
+            clearTimeout(silenceTimer);
+            clearTimeout(maxTimer);
+            try { await listener?.remove(); } catch { /* ignore */ }
+            if (activeRef.current) {
+              try { await SpeechRecognition.stop(); } catch { /* ignore */ }
+            }
+            activeRef.current = false;
+            finishRef.current = null;
+            setListening(false);
+            resolve(transcript ? normalize(transcript) : null);
+          };
+          finishRef.current = finish;
+
+          const armSilence = (ms) => {
+            clearTimeout(silenceTimer);
+            silenceTimer = setTimeout(finish, ms);
+          };
+
+          try {
+            listener = await SpeechRecognition.addListener("partialResults", (data) => {
+              const next = data?.matches?.[0];
+              if (next && next !== transcript) {
+                transcript = next;
+                armSilence(SILENCE_MS); // heard something new → restart pause timer
+              }
+            });
+
+            armSilence(FIRST_WORD_MS);
+            maxTimer = setTimeout(finish, MAX_MS);
+
+            // On iOS with partialResults:true this resolves immediately and
+            // results flow through the listener; on Android it may resolve
+            // with final matches when recognition ends.
+            const res = await SpeechRecognition.start({
+              language: langOverride || language,
+              maxResults: 1,
+              partialResults: true,
+              popup: false,
+            });
+            const finalMatch = res?.matches?.[0];
+            if (finalMatch) {
+              transcript = finalMatch;
+              finish();
+            }
+          } catch (e) {
+            setError(e?.message || "error");
+            finish();
+          }
+        });
       } catch (e) {
         setError(e?.message || "error");
-        return null;
-      } finally {
         activeRef.current = false;
         setListening(false);
+        return null;
       }
     },
     [supported, language]
   );
 
   const stop = useCallback(async () => {
-    // Only safe to call while actually recording (see note above).
-    if (!supported || !activeRef.current) return;
-    try { await SpeechRecognition.stop(); } catch { /* ignore */ }
-    activeRef.current = false;
-    setListening(false);
-  }, [supported]);
+    finishRef.current?.();
+  }, []);
 
   return { supported, listening, error, listen, stop };
 }

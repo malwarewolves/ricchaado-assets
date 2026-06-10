@@ -1119,7 +1119,7 @@ export default function RicchaadoAcademy() {
               <div style={{textAlign:"center", fontSize:12, fontWeight:800, marginTop:-4,
                 color: listening ? "var(--coral)" : "var(--muted)"}}>
                 {listening
-                  ? (direction === "jp-en" && !current.isCustom ? "🎤 Listening… say the English meaning" : "🎤 Listening… say it in Japanese")
+                  ? (direction === "jp-en" && !current.isCustom ? "🎤 Listening… say the English meaning (tap 🎤 to finish)" : "🎤 Listening… say it in Japanese (tap 🎤 to finish)")
                   : recError === "denied" ? "Mic access denied — enable it in Settings ▸ your app"
                   : recError === "unavailable" ? "Speech recognition unavailable on this device"
                   : voiceHint === "nomatch" ? "Didn't catch that — tap 🎤 and try again"
