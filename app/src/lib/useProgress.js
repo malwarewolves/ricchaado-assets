@@ -3,6 +3,15 @@ import { useAuth } from "./auth.jsx";
 import { supabase, isSupabaseConfigured } from "./supabase.js";
 
 const LS_KEY = "ricchaado_progress";
+const ACT_KEY = "keiro_activity"; // rolling per-quiz log for weekly stats
+const ACTIVITY_DAYS = 90;
+const DAY_MS = 864e5;
+
+const readActivity = () => {
+  try { return JSON.parse(localStorage.getItem(ACT_KEY) || "[]"); }
+  catch { return []; }
+};
+const writeActivity = (log) => localStorage.setItem(ACT_KEY, JSON.stringify(log));
 
 const EMPTY = {
   totalQuizzes: 0,
@@ -50,6 +59,7 @@ export function useProgress() {
   const { user } = useAuth();
   const cloud = isSupabaseConfigured && !!user;
   const [stats, setStats] = useState(() => readLocal());
+  const [activity, setActivity] = useState(() => readActivity());
 
   useEffect(() => {
     let active = true;
@@ -61,6 +71,22 @@ export function useProgress() {
           .eq("id", user.id)
           .maybeSingle();
         if (active && data?.stats) setStats({ ...EMPTY, ...data.stats });
+        // Fresh device: rebuild the local activity log from quiz history.
+        if (active && readActivity().length === 0) {
+          const since = new Date(Date.now() - ACTIVITY_DAYS * DAY_MS).toISOString();
+          const { data: rows } = await supabase
+            .from("quiz_results")
+            .select("created_at, correct, answered")
+            .gte("created_at", since)
+            .order("created_at", { ascending: true });
+          if (active && rows?.length) {
+            const log = rows.map((r) => ({
+              t: new Date(r.created_at).getTime(), c: r.correct, a: r.answered,
+            }));
+            writeActivity(log);
+            setActivity(log);
+          }
+        }
       } else {
         setStats(readLocal());
       }
@@ -85,9 +111,15 @@ export function useProgress() {
         }
         return next;
       });
+      setActivity((prev) => {
+        const cutoff = Date.now() - ACTIVITY_DAYS * DAY_MS;
+        const next = [...prev.filter((e) => e.t >= cutoff), { t: Date.now(), c: correct, a: answered }];
+        writeActivity(next);
+        return next;
+      });
     },
     [cloud, user?.id]
   );
 
-  return { stats, recordResult };
+  return { stats, recordResult, activity };
 }

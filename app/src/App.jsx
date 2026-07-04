@@ -8,6 +8,7 @@ import { useSpeechRecognition } from "./lib/useSpeechRecognition.js";
 import { usePro, FREE_LIMITS, PRO_LIMITS } from "./lib/usePro.js";
 import { useSrs, srsKey } from "./lib/useSrs.js";
 import Paywall from "./components/Paywall.jsx";
+import WeeklyStats from "./components/WeeklyStats.jsx";
 import AccountScreen from "./components/AccountScreen.jsx";
 
 // ============================================================
@@ -718,12 +719,12 @@ export default function RicchaadoAcademy() {
   const inputRef = useRef(null);
 
   // Auth + cloud-synced data (falls back to localStorage when signed out / unconfigured)
-  const { user } = useAuth();
+  const { user, loading: authLoading, configured: authConfigured } = useAuth();
   const { cards: customCards, addCard, deleteCard } = useCustomCards();
   const { isPro, buy: buyPro, restore: restorePro } = usePro();
   const srs = useSrs();
   const customCardLimit = isPro ? PRO_LIMITS.customCards : FREE_LIMITS.customCards;
-  const { stats: lifetime, recordResult } = useProgress();
+  const { stats: lifetime, recordResult, activity } = useProgress();
 
   // Custom flashcards (input fields)
   const [newJp, setNewJp] = useState("");
@@ -818,6 +819,42 @@ export default function RicchaadoAcademy() {
     const q = shuffle(pool).slice(0, 30);
     setQueue(q); setCurrent(q[0]); setInput(""); setFeedback(null);
     setStats({ correct: 0, wrong: 0, total: 0 }); setMode("review"); setScreen("quiz");
+  };
+
+  // Per-area accuracy + weakest items, from the SRS ledger (Pro stats panel).
+  const statsBreakdown = () => {
+    const groups = { Hiragana: { s: 0, c: 0 }, Katakana: { s: 0, c: 0 }, Words: { s: 0, c: 0 }, "My Cards": { s: 0, c: 0 } };
+    const weak = [];
+    const findKana = (ch) => {
+      for (const rows of [HIRAGANA_ROWS, KATAKANA_ROWS]) {
+        for (const r of rows) {
+          const hit = r.chars.find(c => c.char === ch);
+          if (hit) return { romaji: hit.romaji, script: rows === HIRAGANA_ROWS ? "Hiragana" : "Katakana" };
+        }
+      }
+      return null;
+    };
+    Object.entries(srs.items).forEach(([key, v]) => {
+      if (!v.seen) return;
+      const kind = key[0]; const val = key.slice(2);
+      const kana = kind === "k" ? findKana(val) : null;
+      const label = kind === "k" ? (kana?.script || "Hiragana") : kind === "w" ? "Words" : "My Cards";
+      groups[label].s += v.seen; groups[label].c += v.correct;
+      if (v.seen >= 2) {
+        const accuracy = Math.round((v.correct / v.seen) * 100);
+        if (accuracy < 60) {
+          const romaji = kind === "k" ? (kana?.romaji || "")
+            : kind === "w" ? (WORD_BANK.find(w => w.japanese === val)?.romaji || "")
+            : (customCards.find(c => c.japanese === val)?.romaji || "");
+          weak.push({ key, char: val, romaji, accuracy });
+        }
+      }
+    });
+    return {
+      groupStats: Object.entries(groups).filter(([, g]) => g.s > 0)
+        .map(([label, g]) => ({ label, accuracy: Math.round((g.c / g.s) * 100) })),
+      weakItems: weak.sort((a, b) => a.accuracy - b.accuracy).slice(0, 8),
+    };
   };
 
   const startQuiz = () => {
@@ -915,6 +952,44 @@ export default function RicchaadoAcademy() {
       recordedRef.current = false;
     }
   }, [screen, stats.correct, stats.total, recordResult]);
+
+  // Mandatory (free) sign-up: when a backend is configured, an account is
+  // required before the app opens. With no backend configured (no .env),
+  // there is nothing to sign in to, so the app runs open in local mode.
+  if (authConfigured && (authLoading || !user)) {
+    return (
+      <>
+        <style>{styles}</style>
+        <div className="app">
+          <div className="header">
+            <RALogo />
+            <div className="header-right">
+              <div className="header-course">{BRAND.courseLabel}</div>
+              <div className="header-tagline">{BRAND.tagline}</div>
+            </div>
+          </div>
+          {authLoading ? (
+            <div style={{ flex: 1 }} />
+          ) : (
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              <div className="hero">
+                <div className="hero-text">
+                  <div className="hero-welcome">Welcome to Keiro</div>
+                  <div className="hero-title">LEARN<br/><em>JAPANESE</em><br/>FREE</div>
+                </div>
+                <div className="hero-bg">語</div>
+              </div>
+              <p style={{ textAlign: "center", padding: "14px 24px 0", fontSize: 13, fontWeight: 700, color: "var(--muted)", lineHeight: 1.5 }}>
+                Keiro is <strong style={{ color: "var(--coral)" }}>free</strong>. Create your free
+                account to save your streak, cards, and progress — it takes seconds.
+              </p>
+              <AccountScreen lifetime={lifetime} />
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -1301,7 +1376,20 @@ export default function RicchaadoAcademy() {
         )}
 
         {/* ACCOUNT */}
-        {screen === "account" && <AccountScreen lifetime={lifetime} />}
+        {screen === "account" && (() => {
+          const { groupStats, weakItems } = statsBreakdown();
+          return (
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              <div className="settings-content" style={{ paddingBottom: 0 }}>
+                <WeeklyStats activity={activity} isPro={isPro}
+                  groupStats={groupStats} weakItems={weakItems}
+                  onUpgrade={() => setScreen("paywall")}
+                  onReview={() => { if (dueCount > 0) startReview(); }} />
+              </div>
+              <AccountScreen lifetime={lifetime} />
+            </div>
+          );
+        })()}
 
         {/* PAYWALL */}
         {screen === "paywall" && (
