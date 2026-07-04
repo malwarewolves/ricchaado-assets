@@ -10,6 +10,9 @@ you outgrow it.
 2. Open **SQL Editor**, paste the contents of `migrations/0001_init.sql`, and run it.
    This creates the `profiles`, `custom_cards`, and `quiz_results` tables, Row Level Security
    policies (each user can only touch their own rows), and a trigger that creates a profile on signup.
+   Then run `migrations/0002_srs.sql` the same way — it adds the `review_items` table that powers
+   Smart Review (spaced repetition). The Pro flag syncs into `profiles.settings` (`{"pro": true}`),
+   so it needs no extra table.
 3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key.
 4. In the `app/` folder, create a `.env` from the template:
 

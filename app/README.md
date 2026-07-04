@@ -16,7 +16,9 @@ so a rebrand is a single-file change. The logos load from this repo's GitHub raw
 - **Accounts + sync** *(optional)* — sign in to sync custom cards and lifetime progress across devices.
 - **Streaks & stats** — daily streak, best streak, total quizzes, accuracy.
 - **Voice** — 🔊 text-to-speech playback (on-device, free) on every card, with an auto-play toggle.
-- **Speak-to-check** *(native iOS/Android only)* — 🎤 say the word in Words / My Cards mode; hidden on web.
+- **Speak-to-check** *(native iOS/Android only, Pro)* — 🎤 say the word in Japanese, or say the English meaning in JP→EN mode; hidden on web.
+- **Smart Review (SRS, Pro)** — every answer schedules the item in Leitner boxes (1/3/7/14/30 days); the home screen shows what's due and requizzes it.
+- **Keiro Pro** — free tier: all kana, 100 starter words, 10 custom cards. Pro ($4.99 one-time): full word bank, mic, 200 cards, Smart Review. Purchase flow is scaffolded in `src/lib/purchases.js` — swap in StoreKit/RevenueCat when App Store Connect is ready.
 
 ## Run locally
 

@@ -5,6 +5,9 @@ import { useCustomCards } from "./lib/useCustomCards.js";
 import { useProgress } from "./lib/useProgress.js";
 import { useSpeech } from "./lib/useSpeech.js";
 import { useSpeechRecognition } from "./lib/useSpeechRecognition.js";
+import { usePro, FREE_LIMITS, PRO_LIMITS } from "./lib/usePro.js";
+import { useSrs, srsKey } from "./lib/useSrs.js";
+import Paywall from "./components/Paywall.jsx";
 import AccountScreen from "./components/AccountScreen.jsx";
 
 // ============================================================
@@ -717,6 +720,9 @@ export default function RicchaadoAcademy() {
   // Auth + cloud-synced data (falls back to localStorage when signed out / unconfigured)
   const { user } = useAuth();
   const { cards: customCards, addCard, deleteCard } = useCustomCards();
+  const { isPro, buy: buyPro, restore: restorePro } = usePro();
+  const srs = useSrs();
+  const customCardLimit = isPro ? PRO_LIMITS.customCards : FREE_LIMITS.customCards;
   const { stats: lifetime, recordResult } = useProgress();
 
   // Custom flashcards (input fields)
@@ -747,7 +753,7 @@ export default function RicchaadoAcademy() {
   }, []);
 
   const addCustomCard = () => {
-    if (!newJp.trim() || !newEn.trim() || customCards.length >= 200) return;
+    if (!newJp.trim() || !newEn.trim() || customCards.length >= customCardLimit) return;
     addCard({ japanese: newJp.trim(), romaji: newRomaji.trim(), english: newEn.trim() });
     setNewJp(""); setNewRomaji(""); setNewEn("");
   };
@@ -774,11 +780,45 @@ export default function RicchaadoAcademy() {
       else if (scriptMode === "katakana") add(KATAKANA_ROWS, "Katakana");
       else { add(HIRAGANA_ROWS, "Hiragana"); add(KATAKANA_ROWS, "Katakana"); }
     } else {
-      const words = scriptMode === "both" ? WORD_BANK : WORD_BANK.filter(w => w.reading === scriptMode);
+      const bank = isPro ? WORD_BANK : WORD_BANK.slice(0, FREE_LIMITS.words);
+      const words = scriptMode === "both" ? bank : bank.filter(w => w.reading === scriptMode);
       pool = words.map(w => ({ char: w.japanese, romaji: w.romaji, meaning: w.english, isWord: true, type: w.reading === "hiragana" ? "Hiragana" : "Katakana" }));
     }
     return pool;
-  }, [mode, scriptMode, selectedRows, allRows]);
+  }, [mode, scriptMode, selectedRows, allRows, isPro]);
+
+  // Resolve due SRS keys back to quizzable items (kana, words, custom cards).
+  const buildReviewPool = () => {
+    const wordFor = (jp) => WORD_BANK.find(w => w.japanese === jp);
+    const kanaFor = (ch) => {
+      for (const rows of [HIRAGANA_ROWS, KATAKANA_ROWS]) {
+        for (const r of rows) {
+          const hit = r.chars.find(c => c.char === ch);
+          if (hit) return { ...hit, type: rows === HIRAGANA_ROWS ? "Hiragana" : "Katakana", isWord: false };
+        }
+      }
+      return null;
+    };
+    return srs.dueKeys().map((key) => {
+      const [kind, val] = [key.slice(0, 1), key.slice(2)];
+      if (kind === "k") return kanaFor(val);
+      if (kind === "w") {
+        const w = wordFor(val);
+        return w && { char: w.japanese, romaji: w.romaji, meaning: w.english, isWord: true, type: w.reading === "hiragana" ? "Hiragana" : "Katakana" };
+      }
+      const c = customCards.find(cc => cc.japanese === val);
+      return c && { char: c.japanese, romaji: c.romaji || "", meaning: c.english, isWord: true, type: "Custom", isCustom: true };
+    }).filter(Boolean);
+  };
+  const dueCount = buildReviewPool().length;
+
+  const startReview = () => {
+    const pool = buildReviewPool();
+    if (!pool.length) return;
+    const q = shuffle(pool).slice(0, 30);
+    setQueue(q); setCurrent(q[0]); setInput(""); setFeedback(null);
+    setStats({ correct: 0, wrong: 0, total: 0 }); setMode("review"); setScreen("quiz");
+  };
 
   const startQuiz = () => {
     const pool = getPool();
@@ -819,6 +859,7 @@ export default function RicchaadoAcademy() {
     else correct = romajiMatch || jpMatch;
     setStats(s => ({ correct: s.correct + (correct ? 1 : 0), wrong: s.wrong + (!correct ? 1 : 0), total: s.total + 1 }));
     setFeedback({ correct, answer: current.romaji || current.char, japanese: current.char, meaning: current.meaning });
+    srs.recordAnswer(srsKey(current), correct); // feeds Smart Review scheduling
   };
 
   const handleSubmit = () => {
@@ -882,7 +923,7 @@ export default function RicchaadoAcademy() {
 
         {/* HEADER */}
         <div className="header">
-          {(screen === "quiz" || screen === "results") && (
+          {(screen === "quiz" || screen === "results" || screen === "paywall") && (
             <button className="back-btn" onClick={() => setScreen(mode === "custom" ? "custom" : "home")}>←</button>
           )}
           <RALogo />
@@ -914,6 +955,28 @@ export default function RicchaadoAcademy() {
             </div>
 
             <div className="settings-content">
+              <div className="card" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 26, lineHeight: 1 }}>🧠</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: "var(--charcoal)" }}>
+                    Smart Review {!isPro && "⭐"}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", marginTop: 1 }}>
+                    {dueCount > 0 ? `${dueCount} item${dueCount === 1 ? "" : "s"} due for review` : "All caught up — nothing due ✨"}
+                  </div>
+                </div>
+                <button
+                  onClick={() => (isPro ? startReview() : setScreen("paywall"))}
+                  disabled={isPro && dueCount === 0}
+                  style={{
+                    border: "none", borderRadius: 11, padding: "10px 14px", cursor: isPro && dueCount === 0 ? "default" : "pointer",
+                    fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 900, color: "white", flexShrink: 0,
+                    background: isPro && dueCount === 0 ? "var(--cream2)" : "linear-gradient(135deg, var(--coral), var(--accent))",
+                  }}>
+                  {isPro ? "Review" : "Unlock"}
+                </button>
+              </div>
+
               <div>
                 <div className="section-label">🎮 Mode</div>
                 <div className="mode-selector">
@@ -925,7 +988,7 @@ export default function RicchaadoAcademy() {
                   <button className={`mode-btn ${mode === "words" ? "active" : ""}`} onClick={() => setMode("words")}>
                     <span className="mode-btn-icon">語</span>
                     <span className="mode-btn-label">Vocabulary</span>
-                    <span className="mode-btn-sub">{WORD_BANK.length} words</span>
+                    <span className="mode-btn-sub">{isPro ? `${WORD_BANK.length} words` : `${FREE_LIMITS.words} of ${WORD_BANK.length} words`}</span>
                   </button>
                 </div>
               </div>
@@ -1058,13 +1121,14 @@ export default function RicchaadoAcademy() {
                     aria-label={direction === "jp-en" && !current.isCustom ? "Say the English meaning" : "Say the Japanese word"}
                     style={{ background: listening ? "var(--wrong)" : "var(--charcoal)" }}
                     onClick={async () => {
+                      if (!isPro) { setScreen("paywall"); return; }
                       setVoiceHint(null);
                       const lang = (direction === "jp-en" && !current.isCustom) ? "en-US" : "ja-JP";
                       const heard = await listen(lang);
                       if (heard) { setInput(heard); checkAnswer(heard); }
                       else setVoiceHint("nomatch");
                     }}>
-                    {listening ? "…" : "🎤"}
+                    {listening ? "…" : isPro ? "🎤" : "🎤⭐"}
                   </button>
                 )}
                 <button className="submit-btn" onClick={handleSubmit}>→</button>
@@ -1126,7 +1190,10 @@ export default function RicchaadoAcademy() {
               )}
               <div className="results-btns">
                 <button className="results-btn secondary" onClick={()=>setScreen("home")}>← Settings</button>
-                <button className="results-btn primary" onClick={startQuiz}>Try Again 🚀</button>
+                <button className="results-btn primary"
+                  onClick={mode === "review" ? (dueCount > 0 ? startReview : () => setScreen("home")) : startQuiz}>
+                  {mode === "review" ? (dueCount > 0 ? "Keep Reviewing 🧠" : "Done ✨") : "Try Again 🚀"}
+                </button>
               </div>
             </div>
           );
@@ -1137,10 +1204,18 @@ export default function RicchaadoAcademy() {
           <div className="custom-screen">
             <div className="custom-header">
               <div className="custom-title">📝 My Flashcards</div>
-              <div className="custom-count">{customCards.length} / 200 cards</div>
+              <div className="custom-count">
+                {customCards.length} / {customCardLimit} cards
+                {!isPro && (
+                  <button onClick={() => setScreen("paywall")}
+                    style={{ background: "none", border: "none", color: "var(--accent)", fontFamily: "'Nunito', sans-serif", fontSize: 12, fontWeight: 900, cursor: "pointer", marginLeft: 6 }}>
+                    ⭐ Get 200
+                  </button>
+                )}
+              </div>
             </div>
 
-            {customCards.length < 200 && (
+            {customCards.length < customCardLimit && (
               <div className="custom-add-form">
                 <div className="section-label">➕ Add a Card</div>
                 <input className="custom-input" placeholder="Japanese (e.g. ありがとう)"
@@ -1227,6 +1302,11 @@ export default function RicchaadoAcademy() {
 
         {/* ACCOUNT */}
         {screen === "account" && <AccountScreen lifetime={lifetime} />}
+
+        {/* PAYWALL */}
+        {screen === "paywall" && (
+          <Paywall isPro={isPro} onBuy={buyPro} onRestore={restorePro} onClose={() => setScreen("home")} />
+        )}
 
       </div>
     </>
